@@ -1,6 +1,6 @@
 create extension if not exists plpgsql_check schema pg_catalog;
 
-create or replace function pg_catalog.plpgsql_check() returns event_trigger as $$
+create or replace function pg_catalog.plpgsql_auto_check() returns event_trigger as $$
 declare
   verror text;
 begin
@@ -39,7 +39,7 @@ begin
 end;
 $$ language plpgsql;
 
-create event trigger plpgsql_check
-   on ddl_command_end
-   when tag in ('CREATE FUNCTION')
-   execute procedure pg_catalog.plpgsql_check();
+create event trigger plpgsql_auto_check
+  on ddl_command_end
+  when tag in ('CREATE FUNCTION')
+  execute procedure pg_catalog.plpgsql_auto_check();
