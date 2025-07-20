@@ -29,8 +29,8 @@ begin
                                             f.position + 6) as shift_to_left
                         ) as formated(query)
    where l.lanname = 'plpgsql' and
-         p.prorettype <> 2279 and --trigger
-         not (sqlstate = '42804' and
+         p.prorettype <> 'trigger'::regtype and
+         not (sqlstate = '42804' and --datatype_mismatch
               level = 'warning');
 
   if verror is not null then
