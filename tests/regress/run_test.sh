@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PGDATABASE=test_db
+PGDATABASE=test_db
 PG_VERSION=15
 PLPGSQL_CHECK_VERSION=2.8.5
 CONTAINER_NAME=plpgsql_auto_test
@@ -41,6 +41,16 @@ run_test() {
     echo "$2: $line: ok"
   else
     echo "$2: failed"
+  fi
+}
+
+run_clear_test() {
+  # test without 'NOTICE:  plpgsql_check...'
+  # args: --name <test name> --command <sql>
+  if line=$(psql -c "$4" 2>&1 | grep "NOTICE:  plpgsql_check"); then
+    echo "$2: $line: failed"
+  else
+    echo "$2: ok"
   fi
 }
 
@@ -97,3 +107,60 @@ begin
 end;
 ' language plpgsql;
 " --expected "ERROR: record \"new\" has no field \"val3\""
+
+run_clear_test --name "6. disable by plpgsql_auto_check.enabled" --command "
+set plpgsql_auto_check.enabled = off;
+create or replace function unused_variable() returns void as '
+declare
+  my_var1 integer;
+begin
+end;
+' language plpgsql;
+reset plpgsql_auto_check.enabled;
+"
+
+run_clear_test --name "7. disable by plpgsql_auto_check.extra_warnings" --command "
+set plpgsql_auto_check.extra_warnings = off;
+create or replace function unused_parameter(arg1 integer) returns void as '
+begin
+end;
+' language plpgsql;
+reset plpgsql_auto_check.extra_warnings;
+"
+
+run_clear_test --name "8. disable by plpgsql_auto_check.other_warnings" --command "
+set plpgsql_auto_check.other_warnings = off;
+create or replace function unused_variable() returns void as '
+declare
+  my_var1 integer;
+begin
+end;
+' language plpgsql;
+reset plpgsql_auto_check.other_warnings;
+"
+
+run_clear_test --name "9. disable by plpgsql_auto_check.exclude_sqlstates" --command "
+set plpgsql_auto_check.exclude_sqlstates = '00000';
+create or replace function unused_variable() returns void as '
+declare
+  my_var1 integer;
+begin
+end;
+' language plpgsql;
+reset plpgsql_auto_check.exclude_sqlstates;
+"
+
+run_clear_test --name "10. disable by plpgsql_auto_check.exclude_message_pattern" --command "
+set plpgsql_auto_check.exclude_message_pattern = 'WARNING: target type is different type than source';
+create or replace function type_mismatch() returns void as '
+declare
+  my_var1 integer;
+begin
+  select ''blabla''
+    into my_var1;
+
+  perform my_var1;
+end;
+' language plpgsql;
+reset plpgsql_auto_check.exclude_message_pattern;
+"
