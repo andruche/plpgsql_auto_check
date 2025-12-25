@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PGDATABASE=test_db
+PGDATABASE=plpgsql_auto_test
 PG_VERSION=15
 PLPGSQL_CHECK_VERSION=2.8.5
 CONTAINER_NAME=plpgsql_auto_test
@@ -37,7 +37,7 @@ psql() {
 
 run_test() {
   # args: --name <test name> --command <sql> --expected <sql running output pattern>
-  if line=$(psql -c "$4" 2>&1 | grep "NOTICE:  plpgsql_check: $6"); then
+  if line=$(psql -c "$4" 2>&1 | grep "WARNING:  plpgsql_check $6"); then
     echo "$2: $line: ok"
   else
     echo "$2: failed"
@@ -47,7 +47,7 @@ run_test() {
 run_clear_test() {
   # test without 'NOTICE:  plpgsql_check...'
   # args: --name <test name> --command <sql>
-  if line=$(psql -c "$4" 2>&1 | grep "NOTICE:  plpgsql_check"); then
+  if line=$(psql -c "$4" 2>&1 | grep "WARNING:  plpgsql_check"); then
     echo "$2: $line: failed"
   else
     echo "$2: ok"
@@ -68,7 +68,7 @@ begin
             from table1 as t);
 end;
 ' language plpgsql;
-" --expected "ERROR: column t.val2 does not exist"
+" --expected "(error): column t.val2 does not exist"
 
 run_test --name "2. unused variable" --command "
 create function unused_variable() returns void as '
@@ -77,14 +77,14 @@ declare
 begin
 end;
 ' language plpgsql;
-" --expected "WARNING: unused variable \"my_var1\""
+" --expected "(warning): unused variable \"my_var1\""
 
 run_test --name "3. unused argument" --command "
 create function unused_argument(arg1 integer) returns void as '
 begin
 end;
 ' language plpgsql;
-" --expected "WARNING EXTRA: unused parameter \"arg1\""
+" --expected "(warning extra): unused parameter \"arg1\""
 
 psql -c "
 create function update_table1_trigger() returns trigger as '
@@ -97,7 +97,7 @@ end;
 run_test --name "4. check trigger function when create trigger " --command "
 create trigger update_table1 after update on table1
   for each row execute function update_table1_trigger();
-" --expected "ERROR: record \"new\" has no field \"val2\""
+" --expected "(error): record \"new\" has no field \"val2\""
 
 run_test --name "5. check trigger function when change trigger function " --command "
 create or replace function update_table1_trigger() returns trigger as '
@@ -106,7 +106,7 @@ begin
   return null;
 end;
 ' language plpgsql;
-" --expected "ERROR: record \"new\" has no field \"val3\""
+" --expected "(error): record \"new\" has no field \"val3\""
 
 run_clear_test --name "6. disable by plpgsql_auto_check.enabled" --command "
 set plpgsql_auto_check.enabled = off;
@@ -151,7 +151,7 @@ reset plpgsql_auto_check.exclude_sqlstates;
 "
 
 run_clear_test --name "10. disable by plpgsql_auto_check.exclude_message_pattern" --command "
-set plpgsql_auto_check.exclude_message_pattern = 'WARNING: target type is different type than source';
+set plpgsql_auto_check.exclude_message_pattern = 'target type is different type than source';
 create or replace function type_mismatch() returns void as '
 declare
   my_var1 integer;
