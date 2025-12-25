@@ -1,0 +1,4 @@
+comment = 'Automatic plpgsql_check on CREATE FUNCTION / CREATE TRIGGER'
+default_version = '1.0'
+relocatable = true
+requires = 'plpgsql_check'

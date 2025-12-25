@@ -18,5 +18,7 @@ RUN apt-get update && \
 WORKDIR /opt/
 RUN wget https://github.com/okbob/plpgsql_check/archive/refs/tags/v${PLPGSQL_CHECK_VERSION}.zip
 RUN unzip v${PLPGSQL_CHECK_VERSION}.zip
-WORKDIR /opt/plpgsql_check-${PLPGSQL_CHECK_VERSION}/
-RUN make -j4 USE_PGXS=1 install
+RUN cd /opt/plpgsql_check-${PLPGSQL_CHECK_VERSION}/ && make -j4 USE_PGXS=1 install
+
+COPY --from=extension ./* /opt/plpgsql_auto_check/
+RUN cd /opt/plpgsql_auto_check/ && make USE_PGXS=1 install

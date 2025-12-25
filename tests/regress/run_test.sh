@@ -4,10 +4,10 @@ export PGDATABASE=test_db
 PG_VERSION=15
 PLPGSQL_CHECK_VERSION=2.8.5
 CONTAINER_NAME=plpgsql_auto_test
-SRC_DIR=/opt/plpgsql_auto_test_src
 
 export DOCKER_CLI_HINTS=false
 
+echo "- remove previous container:"
 docker rm -f $CONTAINER_NAME
 
 set -e
@@ -20,22 +20,20 @@ elif [ $# -eq 2 ]; then
 fi
 
 image_name=$CONTAINER_NAME:${PG_VERSION}-${PLPGSQL_CHECK_VERSION}
-echo "build docker image"
+echo "- build docker image:"
 docker build -q -t $image_name \
        --build-arg PG_VERSION=$PG_VERSION \
-       --build-arg PLPGSQL_CHECK_VERSION=$PLPGSQL_CHECK_VERSION .
+       --build-arg PLPGSQL_CHECK_VERSION=$PLPGSQL_CHECK_VERSION \
+       --build-context extension=../../extension .
 
-echo "start container"
-docker run -v ../../:$SRC_DIR --name $CONTAINER_NAME -e POSTGRES_PASSWORD=123456 -d $image_name
+echo "- start container:"
+docker run --name $CONTAINER_NAME -e POSTGRES_PASSWORD=123456 -d $image_name
 sleep 2
 docker exec -u postgres $CONTAINER_NAME createdb $PGDATABASE
 
 psql() {
   docker exec -u postgres $CONTAINER_NAME psql -q -d $PGDATABASE "$@"
 }
-
-psql -f $SRC_DIR/enable_plpgsql_auto_check.sql
-psql -c "create table table1 (id integer, val1 integer);"
 
 run_test() {
   # args: --name <test name> --command <sql> --expected <sql running output pattern>
@@ -45,6 +43,13 @@ run_test() {
     echo "$2: failed"
   fi
 }
+
+psql -c "create extension plpgsql_check;"
+psql -c "create extension plpgsql_auto_check;"
+
+echo "- run tests:"
+
+psql -c "create table table1 (id integer, val1 integer);"
 
 run_test --name "1. miss table column name" --command "
 create function miss_table_column_name() returns integer as '
