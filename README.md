@@ -36,6 +36,9 @@ Hint:Perhaps you meant to reference the column "t.val1".
 CREATE FUNCTION
 ```
 
+## dependencies
+- plpgsql_check (extension)
+
 ## installation
 1. [plpgsql_check](https://github.com/okbob/plpgsql_check) (dependencies):
 ```
@@ -61,9 +64,6 @@ or execute sql manually:
 ```bash
 psql -d mydb -f extension/plpgsql_auto_check--1.0.sql
 ```
-
-## dependencies
-- plpgsql_check (extension)
 
 ## configuration parameters
 
